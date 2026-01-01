@@ -299,18 +299,22 @@ function startMetro(previewUrl: string): Promise<void> {
         resolveMetroReady?.()
         metroReadySettled = true
       })
-      .catch((error) => {
+      .catch((error: unknown) => {
         if (metroProcess && metroProcess !== spawnedProcess) {
           return
         }
 
-        log(`Metro readiness check failed: ${error.message}`)
+        const message = error instanceof Error ? error.message : String(error)
+
+        log(`Metro readiness check failed: ${message}`)
         status.text = "$(error) React Native Preview: Metro not ready"
         status.tooltip = formatStatusTooltip(previewUrl, workingDirectory)
         void vscode.window.showErrorMessage(
           "React Native Preview: Preview URL did not respond. See output for troubleshooting."
         )
-        rejectMetroReady?.(error)
+        rejectMetroReady?.(
+          error instanceof Error ? error : new Error("Metro readiness check failed")
+        )
         metroReadySettled = true
         void stopMetro("Metro readiness check failed")
       })
@@ -427,7 +431,7 @@ async function reloadPreview() {
   }
 }
 
-async function stopMetro(reason?: string) {
+function stopMetro(reason?: string): Promise<void> {
   const status = getStatusBarItem()
   const workingDirectory = metroWorkingDirectory
 
@@ -436,7 +440,7 @@ async function stopMetro(reason?: string) {
     status.text = "$(debug-stop) React Native Preview: Metro stopped"
     status.tooltip = "Metro is not running"
     resetMetroState()
-    return
+    return Promise.resolve()
   }
 
   metroStopRequested = true
@@ -451,6 +455,7 @@ async function stopMetro(reason?: string) {
   }
   metroProcess.kill()
   resetMetroState()
+  return Promise.resolve()
 }
 
 export function activate(context: vscode.ExtensionContext) {
