@@ -9,13 +9,19 @@ else
 PLAYWRIGHT_INSTALL_ARGS = $(PLAYWRIGHT_BROWSER)
 endif
 
-.PHONY: build preview-deps preview-screenshot
+.PHONY: build lint test preview-deps preview-screenshot
 
 build:
 	pnpm run build
 
 package: build
 	pnpm run package
+
+lint:
+	npm run lint
+
+test:
+	npm test
 
 preview-deps:
 	uv venv .venv

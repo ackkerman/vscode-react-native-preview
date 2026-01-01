@@ -212,24 +212,18 @@ function requestPreview(previewUrl: string, timeoutMs: number): Promise<number |
     const url = new URL(previewUrl)
     const transport = url.protocol === "https:" ? https : http
 
-    let timeout: NodeJS.Timeout | undefined
-
     const request = transport.get(url, (response) => {
-      if (timeout) {
-        clearTimeout(timeout)
-      }
+      clearTimeout(timeout)
       resolve(response.statusCode ?? null)
       response.resume()
     })
 
-    timeout = setTimeout(() => {
+    const timeout = setTimeout(() => {
       request.destroy(new Error("Request timed out"))
     }, timeoutMs)
 
     request.on("error", (error) => {
-      if (timeout) {
-        clearTimeout(timeout)
-      }
+      clearTimeout(timeout)
       reject(error)
     })
   })
