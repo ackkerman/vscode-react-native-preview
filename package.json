@@ -64,12 +64,20 @@
   "scripts": {
     "build": "tsc -p .",
     "package": "pnpm run build && vsce package",
-    "vsix": "npm run package"
+    "vsix": "pnpm run package",
+    "test": "node ./dist/test/runTest.js"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "@types/chai": "^4.3.11",
+    "@types/mocha": "^10.0.6",
+    "@types/sinon": "^10.0.17",
     "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^2.32.0",
+    "@vscode/test-electron": "^2.3.8",
+    "chai": "^4.4.1",
+    "mocha": "^10.3.0",
+    "sinon": "^17.0.1",
     "typescript": "^5.3.3"
   }
 }

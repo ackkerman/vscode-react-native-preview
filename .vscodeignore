@@ -4,6 +4,8 @@
 docs/**
 scripts/**
 src/**
+dist/test/**
+test-fixtures/**
 node_modules/**
 artifacts/**
 **/*.ts
@@ -15,3 +17,4 @@ Makefile
 pnpm-lock.yaml
 package-lock.json
 .gitignore
+.vscode-test/**

@@ -1,5 +1,6 @@
 import * as vscode from "vscode"
-import { spawn, ChildProcess } from "child_process"
+import * as childProcess from "child_process"
+import type { ChildProcess } from "child_process"
 import * as http from "http"
 import * as https from "https"
 
@@ -277,7 +278,7 @@ function startMetro(previewUrl: string): Promise<void> {
     status.tooltip = formatStatusTooltip(previewUrl, workingDirectory)
 
     metroStopRequested = false
-    const spawnedProcess = spawn("npx", ["expo", "start", "--web"], {
+    const spawnedProcess = childProcess.spawn("npx", ["expo", "start", "--web"], {
       shell: true,
       cwd: workingDirectory
     })
