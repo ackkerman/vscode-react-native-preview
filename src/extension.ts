@@ -14,6 +14,9 @@ let metroReadySettled = false
 let panel: vscode.WebviewPanel | null = null
 let statusBarItem: vscode.StatusBarItem | null = null
 let metroStopRequested = false
+let previewHealthMonitor: NodeJS.Timeout | null = null
+let previewHealthMonitorToken = 0
+let previewHealthCheckInFlight = false
 
 const outputChannel = vscode.window.createOutputChannel("React Native Preview")
 
@@ -53,11 +56,55 @@ function validatePreviewUrl(): string {
 }
 
 function resetMetroState() {
+  clearPreviewHealthMonitor()
   metroProcess = null
   metroReadyPromise = null
   resolveMetroReady = null
   rejectMetroReady = null
   metroReadySettled = false
+}
+
+function clearPreviewHealthMonitor() {
+  previewHealthMonitorToken += 1
+  previewHealthCheckInFlight = false
+  if (previewHealthMonitor) {
+    clearInterval(previewHealthMonitor)
+    previewHealthMonitor = null
+  }
+}
+
+function startPreviewHealthMonitor(previewUrl: string) {
+  clearPreviewHealthMonitor()
+  const token = previewHealthMonitorToken
+
+  previewHealthMonitor = setInterval(() => {
+    if (previewHealthCheckInFlight || token !== previewHealthMonitorToken) {
+      return
+    }
+
+    previewHealthCheckInFlight = true
+    void checkPreviewHealth(previewUrl)
+      .then((healthy) => {
+        if (token !== previewHealthMonitorToken) {
+          return
+        }
+
+        if (healthy) {
+          return
+        }
+
+        log(`Preview at ${previewUrl} stopped responding. Metro will restart on next preview request.`)
+        const status = getStatusBarItem()
+        status.text = "$(debug-stop) React Native Preview: Metro stopped"
+        status.tooltip = "Metro is not running"
+        resetMetroState()
+      })
+      .finally(() => {
+        if (token === previewHealthMonitorToken) {
+          previewHealthCheckInFlight = false
+        }
+      })
+  }, METRO_READY_INTERVAL_MS)
 }
 
 async function waitForPreviewReady(previewUrl: string): Promise<void> {
@@ -110,6 +157,7 @@ function startMetro(previewUrl: string): Promise<void> {
       log(`Preview already responding at ${previewUrl}. Reusing existing Metro instance.`)
       status.text = "$(play) React Native Preview: Metro running"
       status.tooltip = `Preview available at ${previewUrl}`
+      startPreviewHealthMonitor(previewUrl)
       metroReadySettled = true
       return
     }
@@ -183,6 +231,7 @@ function startMetro(previewUrl: string): Promise<void> {
         log(`Preview URL responded at ${previewUrl}`)
         status.text = "$(play) React Native Preview: Metro running"
         status.tooltip = `Preview available at ${previewUrl}`
+        startPreviewHealthMonitor(previewUrl)
         resolveMetroReady?.()
         metroReadySettled = true
       })
