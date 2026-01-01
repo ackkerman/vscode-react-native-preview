@@ -4,7 +4,7 @@ Usage:
   make preview-screenshot
 
 Requirements:
-  make preview-deps (installs Python dependencies and Playwright Chromium with system libraries)
+  make preview-deps (installs Python dependencies and Playwright Chromium via uv; set PLAYWRIGHT_WITH_DEPS=1 to install OS deps)
 """
 
 from __future__ import annotations
