@@ -32,9 +32,6 @@ preview-screenshot: preview-deps
 	uv run --python .venv/bin/python scripts/preview_screenshot.py --url $(PREVIEW_URL) --out $(PREVIEW_OUT)
 
 clean:
-	rm -rf artifacts
-	rm -rf dist
-	rm -rf node_modules
-	rm -rf .vscode-test
-	rm *.vsix
+	rm -rf artifacts dist node_modules .vscode-test .venv
+	rm -f *.vsix
 	rm -rf .venv
