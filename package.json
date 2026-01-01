@@ -1,0 +1,33 @@
+{
+  "name": "rn-preview",
+  "displayName": "React Native Preview",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "activationEvents": [
+    "onCommand:rnPreview.open",
+    "onCommand:rnPreview.restartMetro"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "rnPreview.open",
+        "title": "React Native: Open Preview"
+      },
+      {
+        "command": "rnPreview.restartMetro",
+        "title": "React Native: Restart Metro"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "tsc -p ."
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0"
+  }
+}

@@ -1,0 +1,22 @@
+## Plan
+
+- **Goal**: Scaffold the React Native Preview VS Code extension following `docs/spec.md`, including build tooling and developer guidance for preview image capture.
+
+### To-Do
+
+1. Create project structure and configuration (package.json, tsconfig, src directory) per spec.
+2. Implement minimal extension activation logic with Metro control and webview preview iframe.
+3. Add developer tooling (Makefile, Python script) for preview screenshot generation and document usage in AGENTS instructions.
+4. Install dependencies and ensure TypeScript build succeeds.
+5. Review repository status, run tests, and prepare commit/PR content.
+
+### Progress Log
+
+- Initialized plan for scaffolding tasks and supporting tooling.
+- Scaffolded extension structure (package.json, tsconfig.json, src/extension.ts, spec.md) and supporting tooling.
+- Added preview screenshot workflow (Makefile target and Playwright Python script).
+- Installed Node dev dependencies and verified TypeScript build.
+
+### Decision Log
+
+- Will include Playwright-based preview capture script invoked via Makefile to satisfy UI verification instructions.
