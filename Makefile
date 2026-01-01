@@ -15,3 +15,10 @@ preview-deps:
 
 preview-screenshot: preview-deps
 	python scripts/preview_screenshot.py --url $(PREVIEW_URL) --out $(PREVIEW_OUT)
+
+clean:
+	rm -rf artifacts
+	rm -rf dist
+	rm -rf node_modules
+	rm -rf .vscode-test
+	rm *.vsix
