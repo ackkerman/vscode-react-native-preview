@@ -383,6 +383,7 @@ function ensurePanel(previewUrl: string): vscode.WebviewPanel {
   panel.webview.html = renderLoadingHtml(previewUrl)
 
   panel.onDidDispose(() => {
+    void stopMetro("Preview panel closed")
     panel = null
   })
 
@@ -427,13 +428,23 @@ async function reloadPreview() {
 }
 
 async function stopMetro(reason?: string) {
+  const status = getStatusBarItem()
+  const workingDirectory = metroWorkingDirectory
+
   if (!metroProcess) {
+    log(`Metro stop requested but no running process was found${reason ? ` (${reason})` : ""}.`)
+    status.text = "$(debug-stop) React Native Preview: Metro stopped"
+    status.tooltip = "Metro is not running"
     resetMetroState()
     return
   }
 
   metroStopRequested = true
   log(`Stopping Metro${reason ? `: ${reason}` : ""}`)
+  status.text = "$(debug-stop) React Native Preview: Stopping Metro"
+  status.tooltip = workingDirectory
+    ? `Stopping Metro (workspace: ${workingDirectory})`
+    : "Stopping Metro"
   if (!metroReadySettled) {
     rejectMetroReady?.(new Error("Metro stop requested."))
     metroReadySettled = true
