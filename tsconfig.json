@@ -4,6 +4,8 @@
     "module": "commonjs",
     "outDir": "dist",
     "rootDir": "src",
-    "strict": true
+    "strict": true,
+    "moduleResolution": "node",
+    "types": ["node", "mocha"]
   }
 }
