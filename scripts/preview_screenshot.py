@@ -4,8 +4,7 @@ Usage:
   make preview-screenshot
 
 Requirements:
-  pip install playwright
-  python -m playwright install chromium
+  make preview-deps (installs Python dependencies and Playwright Chromium with system libraries)
 """
 
 from __future__ import annotations
@@ -57,6 +56,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     return 1
   except Exception as exc:  # noqa: BLE001
     print(f"Failed to capture screenshot: {exc}")
+    print("If Chromium dependencies are missing, run `make preview-deps` and try again.")
     return 1
   return 0
 
