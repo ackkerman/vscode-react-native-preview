@@ -18,3 +18,4 @@ pnpm-lock.yaml
 package-lock.json
 .gitignore
 .vscode-test/**
+.venv/**

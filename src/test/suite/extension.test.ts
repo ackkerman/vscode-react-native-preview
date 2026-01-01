@@ -61,7 +61,7 @@ function stubRequestSequence(sandbox: sinon.SinonSandbox, statuses: number[]) {
   return { httpStub, httpsStub }
 }
 
-suite("React Native Preview Commands", () => {
+suite("React Native Preview コマンド", () => {
   const sandbox = sinon.createSandbox()
 
   teardown(async () => {
@@ -69,7 +69,7 @@ suite("React Native Preview Commands", () => {
     sandbox.restore()
   })
 
-  test("open starts metro after health check fails", async () => {
+  test("open はヘルスチェック失敗後に Metro を起動する", async () => {
     const { stub: spawnStub } = stubSpawn(sandbox)
     const { httpStub } = stubRequestSequence(sandbox, [503, 200])
 
@@ -79,7 +79,7 @@ suite("React Native Preview Commands", () => {
     expect(httpStub.callCount).to.be.at.least(2)
   })
 
-  test("open reuses metro when preview already responds", async () => {
+  test("open はプレビュー応答済みなら Metro を再利用する", async () => {
     const { stub: spawnStub } = stubSpawn(sandbox)
     const { httpStub } = stubRequestSequence(sandbox, [200])
 
@@ -89,7 +89,7 @@ suite("React Native Preview Commands", () => {
     expect(httpStub.callCount).to.be.at.least(1)
   })
 
-  test("restart stops and restarts metro process", async () => {
+  test("restart は Metro を停止して再起動する", async () => {
     const { stub: spawnStub, processes } = stubSpawn(sandbox)
     const { httpStub } = stubRequestSequence(sandbox, [503, 200, 503, 200])
 

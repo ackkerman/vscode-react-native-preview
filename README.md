@@ -50,7 +50,8 @@ React Native Preview は Expo/Metro プロジェクトの Web プレビューを
 
 UI 変更時やレビュー用のスクリーンショットが必要な場合は、以下の自動化スクリプトを実行します。
 
-1. 依存関係のセットアップ: `make preview-deps` （Python 依存と Playwright Chromium をインストール）
+1. 依存関係のセットアップ: `make preview-deps` （uv で Python 依存と Playwright Chromium をインストール）
+   - OS依存ライブラリも必要な場合は `make preview-deps PLAYWRIGHT_WITH_DEPS=1` を使用してください（`apt-get` が使える環境向け）。
 2. プレビュー撮影: `make preview-screenshot` （`PREVIEW_URL` や `PREVIEW_OUT` で上書き可能）
 
 生成された画像は `artifacts/preview.png` に保存されます。
