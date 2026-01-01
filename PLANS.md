@@ -19,6 +19,7 @@
 - Added preview screenshot workflow (Makefile target and Playwright Python script).
 - Installed Node dev dependencies and verified TypeScript build.
 - Implemented preview reload command, configurable preview URL setting, and improved Metro lifecycle handling with readiness checks and output channel logging.
+- Added dependency installation to the preview screenshot workflow to avoid missing Playwright Chromium libraries in constrained environments.
 
 ### Decision Log
 
