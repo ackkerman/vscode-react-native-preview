@@ -11,7 +11,10 @@ endif
 
 .PHONY: build lint test preview-deps preview-screenshot
 
-build:
+install:
+	pnpm install
+
+build: install
 	pnpm run build
 
 package: build
@@ -32,6 +35,6 @@ preview-screenshot: preview-deps
 	uv run --python .venv/bin/python scripts/preview_screenshot.py --url $(PREVIEW_URL) --out $(PREVIEW_OUT)
 
 clean:
-	rm -rf artifacts dist node_modules .vscode-test .venv
+	rm -rf artifacts dist node_modules .vscode-test .venv .mypy_cache
 	rm -f *.vsix
 	rm -rf .venv
