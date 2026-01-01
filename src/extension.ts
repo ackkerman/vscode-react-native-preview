@@ -4,6 +4,7 @@ import { spawn, ChildProcess } from "child_process"
 const DEFAULT_PREVIEW_URL = "http://localhost:19006"
 const METRO_READY_TIMEOUT_MS = 30000
 const METRO_READY_INTERVAL_MS = 1000
+const METRO_HEALTHCHECK_TIMEOUT_MS = 3000
 
 let metroProcess: ChildProcess | null = null
 let metroReadyPromise: Promise<void> | null = null
@@ -77,100 +78,132 @@ async function waitForPreviewReady(previewUrl: string): Promise<void> {
   throw new Error(`Preview URL did not respond within ${METRO_READY_TIMEOUT_MS / 1000}s: ${previewUrl}`)
 }
 
+async function checkPreviewHealth(previewUrl: string): Promise<boolean> {
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), METRO_HEALTHCHECK_TIMEOUT_MS)
+
+  try {
+    const response = await fetch(previewUrl, { signal: controller.signal })
+    return (
+      response.ok || response.status === 301 || response.status === 302 || response.status === 308
+    )
+  } catch {
+    return false
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 function startMetro(previewUrl: string): Promise<void> {
   if (metroReadyPromise) {
     return metroReadyPromise
   }
 
   outputChannel.show(true)
-  log("Starting Metro with `npx expo start --web`...")
   const status = getStatusBarItem()
-  status.text = "$(loading~spin) React Native Preview: Starting Metro"
-  status.tooltip = previewUrl
 
-  metroStopRequested = false
-  const spawnedProcess = spawn("npx", ["expo", "start", "--web"], {
-    shell: true
-  })
-  metroProcess = spawnedProcess
-
-  metroReadyPromise = new Promise((resolve, reject) => {
-    resolveMetroReady = resolve
-    rejectMetroReady = reject
+  metroReadyPromise = (async () => {
     metroReadySettled = false
-  })
 
-  spawnedProcess.stdout?.on("data", (data: Buffer) => {
-    log(data.toString().trimEnd())
-  })
-
-  spawnedProcess.stderr?.on("data", (data: Buffer) => {
-    log(data.toString().trimEnd())
-  })
-
-  spawnedProcess.on("error", (error: Error) => {
-    if (metroProcess !== spawnedProcess) {
-      return
-    }
-
-    log(`Metro failed to start: ${error.message}`)
-    status.text = "$(error) React Native Preview: Metro failed"
-    void vscode.window.showErrorMessage("React Native Preview: Metro failed to start. See output for details.")
-    rejectMetroReady?.(error)
-    metroReadySettled = true
-    resetMetroState()
-  })
-
-  spawnedProcess.on("exit", (code: number | null, signal: NodeJS.Signals | null) => {
-    if (metroProcess && metroProcess !== spawnedProcess) {
-      return
-    }
-
-    log(`Metro exited (code=${code ?? "null"}, signal=${signal ?? "null"})`)
-    status.text = "$(debug-stop) React Native Preview: Metro stopped"
-    status.tooltip = "Metro is not running"
-
-    if (!metroStopRequested) {
-      void vscode.window.showWarningMessage(
-        "React Native Preview: Metro process exited. Check the output channel for details."
-      )
-    }
-
-    if (!metroReadySettled) {
-      rejectMetroReady?.(new Error("Metro exited before the preview became ready."))
-      metroReadySettled = true
-    }
-
-    resetMetroState()
-  })
-
-  waitForPreviewReady(previewUrl)
-    .then(() => {
-      if (metroProcess && metroProcess !== spawnedProcess) {
-        return
-      }
-
-      log(`Preview URL responded at ${previewUrl}`)
+    if (await checkPreviewHealth(previewUrl)) {
+      metroStopRequested = false
+      log(`Preview already responding at ${previewUrl}. Reusing existing Metro instance.`)
       status.text = "$(play) React Native Preview: Metro running"
       status.tooltip = `Preview available at ${previewUrl}`
-      resolveMetroReady?.()
       metroReadySettled = true
+      return
+    }
+
+    log("Starting Metro with `npx expo start --web`...")
+    status.text = "$(loading~spin) React Native Preview: Starting Metro"
+    status.tooltip = previewUrl
+
+    metroStopRequested = false
+    const spawnedProcess = spawn("npx", ["expo", "start", "--web"], {
+      shell: true
     })
-    .catch((error) => {
+    metroProcess = spawnedProcess
+
+    const readinessPromise = new Promise<void>((resolve, reject) => {
+      resolveMetroReady = resolve
+      rejectMetroReady = reject
+      metroReadySettled = false
+    })
+
+    spawnedProcess.stdout?.on("data", (data: Buffer) => {
+      log(data.toString().trimEnd())
+    })
+
+    spawnedProcess.stderr?.on("data", (data: Buffer) => {
+      log(data.toString().trimEnd())
+    })
+
+    spawnedProcess.on("error", (error: Error) => {
+      if (metroProcess !== spawnedProcess) {
+        return
+      }
+
+      log(`Metro failed to start: ${error.message}`)
+      status.text = "$(error) React Native Preview: Metro failed"
+      void vscode.window.showErrorMessage("React Native Preview: Metro failed to start. See output for details.")
+      rejectMetroReady?.(error)
+      metroReadySettled = true
+      resetMetroState()
+    })
+
+    spawnedProcess.on("exit", (code: number | null, signal: NodeJS.Signals | null) => {
       if (metroProcess && metroProcess !== spawnedProcess) {
         return
       }
 
-      log(`Metro readiness check failed: ${error.message}`)
-      status.text = "$(error) React Native Preview: Metro not ready"
-      status.tooltip = "Metro failed to respond"
-      void vscode.window.showErrorMessage(
-        "React Native Preview: Preview URL did not respond. See output for troubleshooting."
-      )
-      rejectMetroReady?.(error)
-      metroReadySettled = true
-      void stopMetro("Metro readiness check failed")
+      log(`Metro exited (code=${code ?? "null"}, signal=${signal ?? "null"})`)
+      status.text = "$(debug-stop) React Native Preview: Metro stopped"
+      status.tooltip = "Metro is not running"
+
+      if (!metroStopRequested) {
+        void vscode.window.showWarningMessage(
+          "React Native Preview: Metro process exited. Check the output channel for details."
+        )
+      }
+
+      if (!metroReadySettled) {
+        rejectMetroReady?.(new Error("Metro exited before the preview became ready."))
+        metroReadySettled = true
+      }
+
+      resetMetroState()
     })
+
+    waitForPreviewReady(previewUrl)
+      .then(() => {
+        if (metroProcess && metroProcess !== spawnedProcess) {
+          return
+        }
+
+        log(`Preview URL responded at ${previewUrl}`)
+        status.text = "$(play) React Native Preview: Metro running"
+        status.tooltip = `Preview available at ${previewUrl}`
+        resolveMetroReady?.()
+        metroReadySettled = true
+      })
+      .catch((error) => {
+        if (metroProcess && metroProcess !== spawnedProcess) {
+          return
+        }
+
+        log(`Metro readiness check failed: ${error.message}`)
+        status.text = "$(error) React Native Preview: Metro not ready"
+        status.tooltip = "Metro failed to respond"
+        void vscode.window.showErrorMessage(
+          "React Native Preview: Preview URL did not respond. See output for troubleshooting."
+        )
+        rejectMetroReady?.(error)
+        metroReadySettled = true
+        void stopMetro("Metro readiness check failed")
+      })
+
+    return readinessPromise
+  })()
 
   return metroReadyPromise
 }
