@@ -38,11 +38,20 @@
     }
   },
   "scripts": {
-    "build": "tsc -p ."
+    "prebuild": "npm run lint",
+    "build": "tsc -p .",
+    "lint": "eslint . --ext .ts",
+    "test": "npm run build && xvfb-run -a dbus-run-session -- node ./dist/test/runTest.js"
   },
   "devDependencies": {
-    "typescript": "^5.3.3",
+    "@types/mocha": "^10.0.6",
     "@types/node": "^20.11.0",
-    "@types/vscode": "^1.85.0"
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^7.17.0",
+    "@typescript-eslint/parser": "^7.17.0",
+    "@vscode/test-electron": "^2.4.0",
+    "eslint": "^8.57.0",
+    "mocha": "^10.7.3",
+    "typescript": "5.5.4"
   }
 }

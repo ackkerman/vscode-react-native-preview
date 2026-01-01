@@ -21,6 +21,7 @@
 - Added shared disposal helper to clean up the status bar and output channel when Metro stops or the extension deactivates.
 - Replaced fetch-based preview health checks with Node 16-compatible http/https requests while retaining timeouts and redirect handling.
 - Reviewed repository status and reran the extension build to confirm current behavior is stable.
+- Added linting and extension test scaffolding tasks to prioritize command coverage and code quality in upcoming work.
 
 ### Decision Log
 
