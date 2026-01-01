@@ -9,6 +9,8 @@
 3. Add developer tooling (Makefile, Python script) for preview screenshot generation and document usage in AGENTS instructions.
 4. Install dependencies and ensure TypeScript build succeeds.
 5. Review repository status, run tests, and prepare commit/PR content.
+6. Add rnPreview.reload command wiring and expose rnPreview.previewUrl configuration so the iframe source can be customized.
+7. Harden Metro lifecycle handling (status reporting, readiness checks, reload flows) to reduce blank previews and surface failures.
 
 ### Progress Log
 
@@ -16,6 +18,7 @@
 - Scaffolded extension structure (package.json, tsconfig.json, src/extension.ts, spec.md) and supporting tooling.
 - Added preview screenshot workflow (Makefile target and Playwright Python script).
 - Installed Node dev dependencies and verified TypeScript build.
+- Implemented preview reload command, configurable preview URL setting, and improved Metro lifecycle handling with readiness checks and output channel logging.
 
 ### Decision Log
 

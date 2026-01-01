@@ -7,7 +7,8 @@
   },
   "activationEvents": [
     "onCommand:rnPreview.open",
-    "onCommand:rnPreview.restartMetro"
+    "onCommand:rnPreview.restartMetro",
+    "onCommand:rnPreview.reload"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -19,8 +20,22 @@
       {
         "command": "rnPreview.restartMetro",
         "title": "React Native: Restart Metro"
+      },
+      {
+        "command": "rnPreview.reload",
+        "title": "React Native: Reload Preview"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "React Native Preview",
+      "properties": {
+        "rnPreview.previewUrl": {
+          "type": "string",
+          "default": "http://localhost:19006",
+          "description": "URL used by the preview iframe (e.g. http://localhost:19006)."
+        }
+      }
+    }
   },
   "scripts": {
     "build": "tsc -p ."
