@@ -4,13 +4,8 @@
 
 ### To-Do
 
-1. Create project structure and configuration (package.json, tsconfig, src directory) per spec.
-2. Implement minimal extension activation logic with Metro control and webview preview iframe.
-3. Add developer tooling (Makefile, Python script) for preview screenshot generation and document usage in AGENTS instructions.
-4. Install dependencies and ensure TypeScript build succeeds.
-5. Review repository status, run tests, and prepare commit/PR content.
-6. Add rnPreview.reload command wiring and expose rnPreview.previewUrl configuration so the iframe source can be customized.
-7. Harden Metro lifecycle handling (status reporting, readiness checks, reload flows) to reduce blank previews and surface failures.
+1. Add automated tests covering extension activation, Metro lifecycle controls, and preview reload flows to prevent regressions.
+2. Expand contributor-facing documentation with command usage, configuration examples, and troubleshooting tips for the preview workflow.
 
 ### Progress Log
 
@@ -24,6 +19,7 @@
 - Added workspace folder selection for Metro start and surfaced the working directory in logs and status bar tooltips.
 - Ensured Metro shuts down when the preview panel closes and updated stop flows to immediately reflect stopped status in logs and the status bar.
 - Added shared disposal helper to clean up the status bar and output channel when Metro stops or the extension deactivates.
+- Reviewed repository status and reran the extension build to confirm current behavior is stable.
 
 ### Decision Log
 
