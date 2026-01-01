@@ -1,5 +1,7 @@
 import * as vscode from "vscode"
 import { spawn, ChildProcess } from "child_process"
+import * as http from "http"
+import * as https from "https"
 
 const DEFAULT_PREVIEW_URL = "http://localhost:19006"
 const METRO_READY_TIMEOUT_MS = 30000
@@ -18,12 +20,32 @@ let metroStopRequested = false
 let previewHealthMonitor: NodeJS.Timeout | null = null
 let previewHealthMonitorToken = 0
 let previewHealthCheckInFlight = false
+let outputChannel: vscode.OutputChannel | null = null
 
-const outputChannel = vscode.window.createOutputChannel("React Native Preview")
+function getOutputChannel(): vscode.OutputChannel {
+  if (!outputChannel) {
+    outputChannel = vscode.window.createOutputChannel("React Native Preview")
+  }
+
+  return outputChannel
+}
+
+function disposeExtensionResources() {
+  if (statusBarItem) {
+    statusBarItem.dispose()
+    statusBarItem = null
+  }
+
+  if (outputChannel) {
+    outputChannel.dispose()
+    outputChannel = null
+  }
+}
 
 function log(message: string) {
   const timestamp = new Date().toISOString()
-  outputChannel.appendLine(`[${timestamp}] ${message}`)
+  const channel = getOutputChannel()
+  channel.appendLine(`[${timestamp}] ${message}`)
 }
 
 function formatStatusTooltip(previewUrl: string, workingDirectory: string | null) {
@@ -162,8 +184,8 @@ async function waitForPreviewReady(previewUrl: string): Promise<void> {
 
   while (Date.now() < deadline) {
     try {
-      const response = await fetch(previewUrl)
-      if (response.ok || response.status === 301 || response.status === 302 || response.status === 308) {
+      const statusCode = await requestPreview(previewUrl, METRO_HEALTHCHECK_TIMEOUT_MS)
+      if (statusCode && isHealthyStatus(statusCode)) {
         return
       }
     } catch {
@@ -176,19 +198,44 @@ async function waitForPreviewReady(previewUrl: string): Promise<void> {
 }
 
 async function checkPreviewHealth(previewUrl: string): Promise<boolean> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), METRO_HEALTHCHECK_TIMEOUT_MS)
-
   try {
-    const response = await fetch(previewUrl, { signal: controller.signal })
-    return (
-      response.ok || response.status === 301 || response.status === 302 || response.status === 308
-    )
+    const statusCode = await requestPreview(previewUrl, METRO_HEALTHCHECK_TIMEOUT_MS)
+    return statusCode !== null && isHealthyStatus(statusCode)
   } catch {
     return false
-  } finally {
-    clearTimeout(timeout)
   }
+}
+
+function requestPreview(previewUrl: string, timeoutMs: number): Promise<number | null> {
+  return new Promise((resolve, reject) => {
+    const url = new URL(previewUrl)
+    const transport = url.protocol === "https:" ? https : http
+
+    let timeout: NodeJS.Timeout | undefined
+
+    const request = transport.get(url, (response) => {
+      if (timeout) {
+        clearTimeout(timeout)
+      }
+      resolve(response.statusCode ?? null)
+      response.resume()
+    })
+
+    timeout = setTimeout(() => {
+      request.destroy(new Error("Request timed out"))
+    }, timeoutMs)
+
+    request.on("error", (error) => {
+      if (timeout) {
+        clearTimeout(timeout)
+      }
+      reject(error)
+    })
+  })
+}
+
+function isHealthyStatus(statusCode: number) {
+  return (statusCode >= 200 && statusCode < 300) || statusCode === 301 || statusCode === 302 || statusCode === 308
 }
 
 function startMetro(previewUrl: string): Promise<void> {
@@ -196,7 +243,8 @@ function startMetro(previewUrl: string): Promise<void> {
     return metroReadyPromise
   }
 
-  outputChannel.show(true)
+  const channel = getOutputChannel()
+  channel.show(true)
   const status = getStatusBarItem()
 
   metroReadyPromise = (async () => {
@@ -284,6 +332,7 @@ function startMetro(previewUrl: string): Promise<void> {
       }
 
       resetMetroState()
+      disposeExtensionResources()
     })
 
     waitForPreviewReady(previewUrl)
@@ -436,6 +485,7 @@ async function stopMetro(reason?: string) {
     status.text = "$(debug-stop) React Native Preview: Metro stopped"
     status.tooltip = "Metro is not running"
     resetMetroState()
+    disposeExtensionResources()
     return
   }
 
@@ -473,4 +523,5 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
   void stopMetro("Extension deactivated")
+  disposeExtensionResources()
 }

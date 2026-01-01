@@ -23,6 +23,8 @@
 - Added pre-start Metro health check reuse logic to avoid duplicate spawns and reflect running status in the status bar and logs when an existing preview is already responding.
 - Added workspace folder selection for Metro start and surfaced the working directory in logs and status bar tooltips.
 - Ensured Metro shuts down when the preview panel closes and updated stop flows to immediately reflect stopped status in logs and the status bar.
+- Added shared disposal helper to clean up the status bar and output channel when Metro stops or the extension deactivates.
+- Replaced fetch-based preview health checks with Node 16-compatible http/https requests while retaining timeouts and redirect handling.
 
 ### Decision Log
 
