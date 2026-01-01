@@ -18,12 +18,32 @@ let metroStopRequested = false
 let previewHealthMonitor: NodeJS.Timeout | null = null
 let previewHealthMonitorToken = 0
 let previewHealthCheckInFlight = false
+let outputChannel: vscode.OutputChannel | null = null
 
-const outputChannel = vscode.window.createOutputChannel("React Native Preview")
+function getOutputChannel(): vscode.OutputChannel {
+  if (!outputChannel) {
+    outputChannel = vscode.window.createOutputChannel("React Native Preview")
+  }
+
+  return outputChannel
+}
+
+function disposeExtensionResources() {
+  if (statusBarItem) {
+    statusBarItem.dispose()
+    statusBarItem = null
+  }
+
+  if (outputChannel) {
+    outputChannel.dispose()
+    outputChannel = null
+  }
+}
 
 function log(message: string) {
   const timestamp = new Date().toISOString()
-  outputChannel.appendLine(`[${timestamp}] ${message}`)
+  const channel = getOutputChannel()
+  channel.appendLine(`[${timestamp}] ${message}`)
 }
 
 function formatStatusTooltip(previewUrl: string, workingDirectory: string | null) {
@@ -196,7 +216,8 @@ function startMetro(previewUrl: string): Promise<void> {
     return metroReadyPromise
   }
 
-  outputChannel.show(true)
+  const channel = getOutputChannel()
+  channel.show(true)
   const status = getStatusBarItem()
 
   metroReadyPromise = (async () => {
@@ -284,6 +305,7 @@ function startMetro(previewUrl: string): Promise<void> {
       }
 
       resetMetroState()
+      disposeExtensionResources()
     })
 
     waitForPreviewReady(previewUrl)
@@ -436,6 +458,7 @@ async function stopMetro(reason?: string) {
     status.text = "$(debug-stop) React Native Preview: Metro stopped"
     status.tooltip = "Metro is not running"
     resetMetroState()
+    disposeExtensionResources()
     return
   }
 
@@ -473,4 +496,5 @@ export function activate(context: vscode.ExtensionContext) {
 
 export function deactivate() {
   void stopMetro("Extension deactivated")
+  disposeExtensionResources()
 }
