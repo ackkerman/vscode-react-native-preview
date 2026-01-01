@@ -7,6 +7,7 @@ const METRO_READY_INTERVAL_MS = 1000
 const METRO_HEALTHCHECK_TIMEOUT_MS = 3000
 
 let metroProcess: ChildProcess | null = null
+let metroWorkingDirectory: string | null = null
 let metroReadyPromise: Promise<void> | null = null
 let resolveMetroReady: (() => void) | null = null
 let rejectMetroReady: ((error: Error) => void) | null = null
@@ -23,6 +24,14 @@ const outputChannel = vscode.window.createOutputChannel("React Native Preview")
 function log(message: string) {
   const timestamp = new Date().toISOString()
   outputChannel.appendLine(`[${timestamp}] ${message}`)
+}
+
+function formatStatusTooltip(previewUrl: string, workingDirectory: string | null) {
+  if (!workingDirectory) {
+    return previewUrl
+  }
+
+  return `${previewUrl}\nWorkspace: ${workingDirectory}`
 }
 
 function getStatusBarItem(): vscode.StatusBarItem {
@@ -58,6 +67,7 @@ function validatePreviewUrl(): string {
 function resetMetroState() {
   clearPreviewHealthMonitor()
   metroProcess = null
+  metroWorkingDirectory = null
   metroReadyPromise = null
   resolveMetroReady = null
   rejectMetroReady = null
@@ -71,6 +81,46 @@ function clearPreviewHealthMonitor() {
     clearInterval(previewHealthMonitor)
     previewHealthMonitor = null
   }
+}
+
+type WorkspaceQuickPickItem = vscode.QuickPickItem & {
+  folder: vscode.WorkspaceFolder
+}
+
+async function getMetroWorkingDirectory(): Promise<string | undefined> {
+  const folders = vscode.workspace.workspaceFolders
+
+  if (!folders || folders.length === 0) {
+    const message = "React Native Preview: No workspace folder is open. Metro requires an open folder."
+    log(message)
+    void vscode.window.showWarningMessage(message)
+    return undefined
+  }
+
+  if (folders.length === 1) {
+    return folders[0].uri.fsPath
+  }
+
+  const selection = await vscode.window.showQuickPick<WorkspaceQuickPickItem>(
+    folders.map((folder) => ({
+      label: folder.name,
+      description: folder.uri.fsPath,
+      folder
+    })),
+    {
+      placeHolder: "Select a workspace folder for Metro (Enter to use the first folder)",
+      canPickMany: false
+    }
+  )
+
+  if (!selection) {
+    const message = "React Native Preview: Metro start canceled because no workspace folder was selected."
+    log(message)
+    void vscode.window.showWarningMessage(message)
+    return undefined
+  }
+
+  return selection.folder.uri.fsPath
 }
 
 function startPreviewHealthMonitor(previewUrl: string) {
@@ -152,23 +202,36 @@ function startMetro(previewUrl: string): Promise<void> {
   metroReadyPromise = (async () => {
     metroReadySettled = false
 
+    const workingDirectory = await getMetroWorkingDirectory()
+    if (!workingDirectory) {
+      status.text = "$(debug-stop) React Native Preview: Metro stopped"
+      status.tooltip = "Metro is not running"
+      resetMetroState()
+      throw new Error("Workspace folder selection is required to start Metro.")
+    }
+
+    metroWorkingDirectory = workingDirectory
+
     if (await checkPreviewHealth(previewUrl)) {
       metroStopRequested = false
-      log(`Preview already responding at ${previewUrl}. Reusing existing Metro instance.`)
+      log(
+        `Preview already responding at ${previewUrl}. Reusing existing Metro instance (cwd: ${workingDirectory}).`
+      )
       status.text = "$(play) React Native Preview: Metro running"
-      status.tooltip = `Preview available at ${previewUrl}`
+      status.tooltip = formatStatusTooltip(previewUrl, workingDirectory)
       startPreviewHealthMonitor(previewUrl)
       metroReadySettled = true
       return
     }
 
-    log("Starting Metro with `npx expo start --web`...")
+    log(`Starting Metro with \`npx expo start --web\` (cwd: ${workingDirectory})...`)
     status.text = "$(loading~spin) React Native Preview: Starting Metro"
-    status.tooltip = previewUrl
+    status.tooltip = formatStatusTooltip(previewUrl, workingDirectory)
 
     metroStopRequested = false
     const spawnedProcess = spawn("npx", ["expo", "start", "--web"], {
-      shell: true
+      shell: true,
+      cwd: workingDirectory
     })
     metroProcess = spawnedProcess
 
@@ -193,6 +256,7 @@ function startMetro(previewUrl: string): Promise<void> {
 
       log(`Metro failed to start: ${error.message}`)
       status.text = "$(error) React Native Preview: Metro failed"
+      status.tooltip = formatStatusTooltip(previewUrl, workingDirectory)
       void vscode.window.showErrorMessage("React Native Preview: Metro failed to start. See output for details.")
       rejectMetroReady?.(error)
       metroReadySettled = true
@@ -206,7 +270,7 @@ function startMetro(previewUrl: string): Promise<void> {
 
       log(`Metro exited (code=${code ?? "null"}, signal=${signal ?? "null"})`)
       status.text = "$(debug-stop) React Native Preview: Metro stopped"
-      status.tooltip = "Metro is not running"
+      status.tooltip = formatStatusTooltip(previewUrl, workingDirectory)
 
       if (!metroStopRequested) {
         void vscode.window.showWarningMessage(
@@ -230,7 +294,7 @@ function startMetro(previewUrl: string): Promise<void> {
 
         log(`Preview URL responded at ${previewUrl}`)
         status.text = "$(play) React Native Preview: Metro running"
-        status.tooltip = `Preview available at ${previewUrl}`
+        status.tooltip = formatStatusTooltip(previewUrl, workingDirectory)
         startPreviewHealthMonitor(previewUrl)
         resolveMetroReady?.()
         metroReadySettled = true
@@ -242,7 +306,7 @@ function startMetro(previewUrl: string): Promise<void> {
 
         log(`Metro readiness check failed: ${error.message}`)
         status.text = "$(error) React Native Preview: Metro not ready"
-        status.tooltip = "Metro failed to respond"
+        status.tooltip = formatStatusTooltip(previewUrl, workingDirectory)
         void vscode.window.showErrorMessage(
           "React Native Preview: Preview URL did not respond. See output for troubleshooting."
         )
