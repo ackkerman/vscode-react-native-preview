@@ -36,7 +36,10 @@ CLI usage and native emulators are intentionally excluded.
 - Reload Preview
 - Restart Metro
 
-### 2.5 AI-first Design
+### 2.5 Configuration
+- `rnPreview.previewUrl` (default: `http://localhost:19006`) controls the iframe target for the preview webview.
+
+### 2.6 AI-first Design
 - No code parsing
 - No AST analysis
 - No code generation
