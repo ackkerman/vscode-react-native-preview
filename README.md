@@ -4,13 +4,14 @@
 
 React Native Preview は Expo/Metro プロジェクトの Web プレビューを VS Code で確認し、ステータスバーと出力チャネルに状態を表示する拡張です。
 
-## インストール手順
+## インストール方法
 
 1. VS Code (1.85+) と Node.js を準備し、このリポジトリをクローンします。
 2. `npm install` で依存関係を取得し、`npm run build` で拡張をビルドします。
-3. 開発用途では VS Code の「Run Extension」(F5) で拡張ホストを起動して動作を確認できます。配布したい場合は `npx vsce package` で VSIX を作成し、「Extensions: Install from VSIX」でインストールします。
+3. 開発用途では VS Code の「Run Extension」(F5) で拡張ホストを起動して動作を確認できます。
+4. 配布用 VSIX は `npm run package` もしくは `npm run vsix` を実行して作成し、「Extensions: Install from VSIX」でインストールします。
 
-## 主要コマンド
+## コマンド一覧
 
 - **React Native: Open Preview (`rnPreview.open`)**: プレビュー WebView を開き、`npx expo start --web` で Metro/Expo を起動します。
 - **React Native: Reload Preview (`rnPreview.reload`)**: 開いたプレビューを再読み込みし、Metro が停止している場合は再起動します。
@@ -26,10 +27,10 @@ React Native Preview は Expo/Metro プロジェクトの Web プレビューを
 - `$(debug-stop) React Native Preview: Metro stopped`/`Stopping Metro`: 停止中または停止完了。
 - `$(error) React Native Preview: Metro failed/not ready`: 起動失敗やプレビュー応答なし。詳細は出力チャネルを参照してください。
 
-## 設定: `rnPreview.previewUrl`
+## 設定項目
 
-- 既定値は `http://localhost:19006` です。Expo Web のホスト/ポートに合わせて変更できます。
-- VS Code の Settings UI または `settings.json` で設定します:
+- `rnPreview.previewUrl`: 既定値は `http://localhost:19006` です。Expo Web のホスト/ポートに合わせて変更できます。
+- VS Code の Settings UI または `settings.json` で設定します。
 
   ```json
   {
@@ -45,7 +46,7 @@ React Native Preview は Expo/Metro プロジェクトの Web プレビューを
 - プレビュー URL で Metro/Expo が応答できるよう、`package.json` のスクリプトや `app.json` の設定を確認してください。
 - ワークスペースが複数ある場合は、Metro の起動フォルダーを選択する必要があります。
 
-## プレビュー取得ワークフロー
+## プレビュー撮影手順
 
 UI 変更時やレビュー用のスクリーンショットが必要な場合は、以下の自動化スクリプトを実行します。
 

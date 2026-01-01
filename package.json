@@ -1,7 +1,22 @@
 {
-  "name": "rn-preview",
+  "name": "react-native-preview",
   "displayName": "React Native Preview",
+  "description": "Preview Expo/Metro web output inside VS Code with status bar controls.",
   "version": "0.1.0",
+  "publisher": "ackkerman",
+  "categories": [
+    "Other"
+  ],
+  "icon": "media/logo-light.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ackkerman/vscode-react-native-preview.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ackkerman/vscode-react-native-preview/issues"
+  },
+  "homepage": "https://github.com/ackkerman/vscode-react-native-preview#readme",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -12,18 +27,27 @@
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "react-native-preview",
+          "title": "React Native Preview",
+          "icon": "media/logo-light.svg"
+        }
+      ]  
+    },
     "commands": [
       {
         "command": "rnPreview.open",
-        "title": "React Native: Open Preview"
+        "title": "React Native Preview: Open Preview"
       },
       {
         "command": "rnPreview.restartMetro",
-        "title": "React Native: Restart Metro"
+        "title": "React Native Preview: Restart Metro"
       },
       {
         "command": "rnPreview.reload",
-        "title": "React Native: Reload Preview"
+        "title": "React Native Preview: Reload Preview"
       }
     ],
     "configuration": {
@@ -38,11 +62,14 @@
     }
   },
   "scripts": {
-    "build": "tsc -p ."
+    "build": "tsc -p .",
+    "package": "pnpm run build && vsce package",
+    "vsix": "npm run package"
   },
   "devDependencies": {
-    "typescript": "^5.3.3",
     "@types/node": "^20.11.0",
-    "@types/vscode": "^1.85.0"
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.32.0",
+    "typescript": "^5.3.3"
   }
 }

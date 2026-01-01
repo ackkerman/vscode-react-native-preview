@@ -1,0 +1,17 @@
+.vscode/**
+.github/**
+.idea/**
+docs/**
+scripts/**
+src/**
+node_modules/**
+artifacts/**
+**/*.ts
+**/*.tsbuildinfo
+**/*.map
+spec.md
+PLANS.md
+Makefile
+pnpm-lock.yaml
+package-lock.json
+.gitignore

@@ -4,7 +4,10 @@ PREVIEW_OUT ?= artifacts/preview.png
 .PHONY: build preview-deps preview-screenshot
 
 build:
-	npm run build
+	pnpm run build
+
+package: build
+	pnpm run package
 
 preview-deps:
 	python -m pip install --upgrade -r scripts/requirements.txt
