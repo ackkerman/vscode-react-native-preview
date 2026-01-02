@@ -1,15 +1,13 @@
-# React Native Preview
-
-**UI変更時は `make preview-screenshot` を実行してプレビュー画像を更新し、既存の自動化スクリプトを活用してください。**
+<div align="center">
+<img src="media/logo.png" width="200" height="200" />
+    <h1>React Native Preview</h1>
+    <h3><em>VSCode内でReact Nativeのプレビューを行う拡張機能</em></h3>
+</div>
 
 React Native Preview は Expo/Metro プロジェクトの Web プレビューを VS Code で確認し、ステータスバーと出力チャネルに状態を表示する拡張です。
 
-## インストール方法
+![](./media/ui-preview.png)
 
-1. VS Code (1.85+) と Node.js を準備し、このリポジトリをクローンします。
-2. `npm install` で依存関係を取得し、`npm run build` で拡張をビルドします。
-3. 開発用途では VS Code の「Run Extension」(F5) で拡張ホストを起動して動作を確認できます。
-4. 配布用 VSIX は `npm run package` もしくは `npm run vsix` を実行して作成し、「Extensions: Install from VSIX」でインストールします。
 
 ## コマンド一覧
 
@@ -46,16 +44,6 @@ React Native Preview は Expo/Metro プロジェクトの Web プレビューを
 - プレビューは `npx expo start --web` を使用するため、ワークスペースに Expo/Metro 環境がセットアップされていることが前提です。
 - プレビュー URL で Metro/Expo が応答できるよう、`package.json` のスクリプトや `app.json` の設定を確認してください。
 - ワークスペースが複数ある場合は、Metro の起動フォルダーを選択する必要があります。
-
-## プレビュー撮影手順
-
-UI 変更時やレビュー用のスクリーンショットが必要な場合は、以下の自動化スクリプトを実行します。
-
-1. 依存関係のセットアップ: `make preview-deps` （uv で Python 依存と Playwright Chromium をインストール）
-   - OS依存ライブラリも必要な場合は `make preview-deps PLAYWRIGHT_WITH_DEPS=1` を使用してください（`apt-get` が使える環境向け）。
-2. プレビュー撮影: `make preview-screenshot` （`PREVIEW_URL` や `PREVIEW_OUT` で上書き可能）
-
-生成された画像は `artifacts/preview.png` に保存されます。
 
 ## トラブルシューティング
 
