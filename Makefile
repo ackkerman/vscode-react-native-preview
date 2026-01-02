@@ -19,8 +19,8 @@ build: install
 
 package: build
 	pnpm run package
-	
-pubslish: build
+
+publish: build
 	pnpm run publish
 
 lint:

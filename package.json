@@ -2,7 +2,7 @@
   "name": "react-native-preview",
   "displayName": "React Native Preview",
   "description": "Preview Expo/Metro web output inside VS Code with status bar controls.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "ackkerman",
   "categories": [
     "Other"
