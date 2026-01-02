@@ -7,7 +7,7 @@
   "categories": [
     "Other"
   ],
-  "icon": "media/logo-light.png",
+  "icon": "media/logo.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/ackkerman/vscode-react-native-preview.git"
@@ -32,7 +32,7 @@
         {
           "id": "react-native-preview",
           "title": "React Native Preview",
-          "icon": "media/logo-light.svg"
+          "icon": "media/logo.svg"
         }
       ]  
     },
