@@ -19,6 +19,9 @@ build: install
 
 package: build
 	pnpm run package
+	
+pubslish: build
+	pnpm run publish
 
 lint:
 	npm run lint

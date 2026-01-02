@@ -64,6 +64,7 @@
   "scripts": {
     "build": "tsc -p .",
     "package": "pnpm run build && vsce package",
+    "publish": "vsce publish",
     "vsix": "pnpm run package",
     "test": "node ./dist/test/runTest.js"
   },
