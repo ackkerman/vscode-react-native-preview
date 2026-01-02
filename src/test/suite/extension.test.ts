@@ -72,6 +72,13 @@ function stubPortPrompt(sandbox: sinon.SinonSandbox, value: string | undefined) 
   return sandbox.stub(vscode.window, "showInputBox").resolves(value)
 }
 
+function stubViewportPrompt(sandbox: sinon.SinonSandbox) {
+  return sandbox.stub(vscode.window, "showQuickPick").resolves({
+    label: "Full (window)",
+    viewport: { mode: "full" }
+  } as unknown as vscode.QuickPickItem)
+}
+
 suite("React Native Preview コマンド", () => {
   const sandbox = sinon.createSandbox()
 
@@ -84,6 +91,7 @@ suite("React Native Preview コマンド", () => {
     const { stub: spawnStub } = stubSpawn(sandbox)
     const { httpStub } = stubRequestSequence(sandbox, [503, 200])
     stubPortPrompt(sandbox, "")
+    stubViewportPrompt(sandbox)
 
     await vscode.commands.executeCommand("rnPreview.open")
 
@@ -95,6 +103,7 @@ suite("React Native Preview コマンド", () => {
     const { stub: spawnStub } = stubSpawn(sandbox)
     const { httpStub } = stubRequestSequence(sandbox, [200])
     stubPortPrompt(sandbox, "")
+    stubViewportPrompt(sandbox)
 
     await vscode.commands.executeCommand("rnPreview.open")
 
@@ -106,6 +115,7 @@ suite("React Native Preview コマンド", () => {
     const { stub: spawnStub, processes } = stubSpawn(sandbox)
     const { httpStub } = stubRequestSequence(sandbox, [503, 200, 503, 200])
     stubPortPrompt(sandbox, "")
+    stubViewportPrompt(sandbox)
 
     await vscode.commands.executeCommand("rnPreview.open")
     await vscode.commands.executeCommand("rnPreview.restartMetro")

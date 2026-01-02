@@ -14,6 +14,7 @@ React Native Preview は Expo/Metro プロジェクトの Web プレビューを
 ## コマンド一覧
 
 - **React Native: Open Preview (`rnPreview.open`)**: プレビュー WebView を開き、`npx expo start --web` で Metro/Expo を起動します。
+- Open Preview 実行時にポート番号とプレビューサイズ（フル/端末サイズ/カスタム）を選択できます。未入力の場合はポート 19006 にフォールバックします。
 - **React Native: Reload Preview (`rnPreview.reload`)**: 開いたプレビューを再読み込みし、Metro が停止している場合は再起動します。
 - **React Native: Restart Metro (`rnPreview.restartMetro`)**: Metro を停止してから再起動し、プレビューを開き直します。
 

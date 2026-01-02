@@ -10,6 +10,43 @@ const METRO_READY_TIMEOUT_MS = 30000
 const METRO_READY_INTERVAL_MS = 1000
 const METRO_HEALTHCHECK_TIMEOUT_MS = 3000
 
+type PreviewViewport =
+  | {
+      mode: "full"
+    }
+  | {
+      mode: "device"
+      label: string
+      width: number
+      height: number
+    }
+
+type PreviewViewportQuickPickItem = vscode.QuickPickItem & {
+  viewport?: PreviewViewport
+  action?: "custom"
+}
+
+const VIEWPORT_PRESETS: PreviewViewportQuickPickItem[] = [
+  {
+    label: "Full (window)",
+    description: "Use the full webview area",
+    viewport: { mode: "full" }
+  },
+  {
+    label: "iPhone 16 (1179 x 2556)",
+    viewport: { mode: "device", label: "iPhone 16", width: 1179, height: 2556 }
+  },
+  {
+    label: "Pixel 9 (1080 x 2424)",
+    viewport: { mode: "device", label: "Pixel 9", width: 1080, height: 2424 }
+  },
+  {
+    label: "Custom size...",
+    description: "Enter width and height",
+    action: "custom"
+  }
+]
+
 let metroProcess: ChildProcess | null = null
 let metroWorkingDirectory: string | null = null
 let metroReadyPromise: Promise<void> | null = null
@@ -24,6 +61,7 @@ let previewHealthMonitorToken = 0
 let previewHealthCheckInFlight = false
 let outputChannel: vscode.OutputChannel | null = null
 let currentPreviewUrl: string | null = null
+let currentPreviewViewport: PreviewViewport = { mode: "full" }
 
 function getOutputChannel(): vscode.OutputChannel {
   if (!outputChannel) {
@@ -93,6 +131,63 @@ function resolvePreviewUrlWithPort(previewUrl: string, port: number): string {
   const url = new URL(previewUrl)
   url.port = String(port)
   return url.toString()
+}
+
+async function resolvePreviewViewportForOpen(): Promise<PreviewViewport | null> {
+  const selection = await vscode.window.showQuickPick(VIEWPORT_PRESETS, {
+    placeHolder: "Select preview size"
+  })
+
+  if (!selection) {
+    return null
+  }
+
+  if (selection.viewport) {
+    return selection.viewport
+  }
+
+  if (selection.action === "custom") {
+    const widthInput = await vscode.window.showInputBox({
+      prompt: "Preview width in pixels",
+      placeHolder: "1179"
+    })
+    if (widthInput === undefined) {
+      return null
+    }
+
+    const heightInput = await vscode.window.showInputBox({
+      prompt: "Preview height in pixels",
+      placeHolder: "2556"
+    })
+    if (heightInput === undefined) {
+      return null
+    }
+
+    const width = Number(widthInput.trim())
+    const height = Number(heightInput.trim())
+    if (
+      !Number.isInteger(width) ||
+      !Number.isInteger(height) ||
+      width < 1 ||
+      height < 1 ||
+      width > 10000 ||
+      height > 10000
+    ) {
+      const message = `Invalid size "${widthInput} x ${heightInput}". Falling back to full preview.`
+      log(message)
+      void vscode.window.showWarningMessage(message)
+      return { mode: "full" }
+    }
+
+    return {
+      mode: "device",
+      label: `Custom ${width} x ${height}`,
+      width,
+      height
+    }
+  }
+
+  return { mode: "full" }
 }
 
 async function resolvePreviewUrlForOpen(): Promise<string | null> {
@@ -431,7 +526,47 @@ function renderErrorHtml(previewUrl: string, reason: string) {
   `
 }
 
-function renderPreviewHtml(previewUrl: string) {
+function renderPreviewHtml(previewUrl: string, viewport: PreviewViewport) {
+  if (viewport.mode === "device") {
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        </head>
+        <body style="margin:0;background:#0f172a;overflow:hidden;">
+          <div id="preview-root" style="position:relative;width:100vw;height:100vh;">
+            <div id="frame-wrapper" style="position:absolute;top:50%;left:50%;transform-origin:top left;">
+              <div
+                id="device-frame"
+                style="width:${viewport.width}px;height:${viewport.height}px;border-radius:28px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.45);border:1px solid rgba(148,163,184,0.35);background:#0b1220;"
+              >
+                <iframe
+                  src="${previewUrl}"
+                  style="width:100%;height:100%;border:none;"
+                ></iframe>
+              </div>
+            </div>
+          </div>
+          <script>
+            const wrapper = document.getElementById("frame-wrapper");
+            const frameWidth = ${viewport.width};
+            const frameHeight = ${viewport.height};
+            const applyScale = () => {
+              const availableWidth = Math.max(window.innerWidth - 32, 0);
+              const availableHeight = Math.max(window.innerHeight - 32, 0);
+              const scale = Math.min(availableWidth / frameWidth, availableHeight / frameHeight, 1);
+              wrapper.style.transform = \`translate(-50%, -50%) scale(\${scale})\`;
+            };
+            window.addEventListener("resize", applyScale);
+            applyScale();
+          </script>
+        </body>
+      </html>
+    `
+  }
+
   return `
     <!DOCTYPE html>
     <html>
@@ -465,20 +600,22 @@ function ensurePanel(previewUrl: string): vscode.WebviewPanel {
     void stopMetro("Preview panel closed")
     panel = null
     currentPreviewUrl = null
+    currentPreviewViewport = { mode: "full" }
   })
 
   return panel
 }
 
-async function showPreview(previewUrl: string) {
+async function showPreview(previewUrl: string, viewport: PreviewViewport) {
   currentPreviewUrl = previewUrl
+  currentPreviewViewport = viewport
   const previewPanel = ensurePanel(previewUrl)
   previewPanel.webview.html = renderLoadingHtml(previewUrl)
   previewPanel.reveal()
 
   try {
     await startMetro(previewUrl)
-    previewPanel.webview.html = renderPreviewHtml(previewUrl)
+    previewPanel.webview.html = renderPreviewHtml(previewUrl, viewport)
   } catch (error) {
     const reason = (error as Error).message ?? "Unknown error"
     previewPanel.webview.html = renderErrorHtml(previewUrl, reason)
@@ -488,8 +625,9 @@ async function showPreview(previewUrl: string) {
 async function reloadPreview() {
   const previewUrl = currentPreviewUrl ?? validatePreviewUrl()
   currentPreviewUrl = previewUrl
+  const viewport = currentPreviewViewport
   if (!panel) {
-    await showPreview(previewUrl)
+    await showPreview(previewUrl, viewport)
     return
   }
 
@@ -500,7 +638,7 @@ async function reloadPreview() {
     if (typeof webview.reload === "function") {
       webview.reload()
     } else {
-      panel.webview.html = renderPreviewHtml(previewUrl)
+      panel.webview.html = renderPreviewHtml(previewUrl, viewport)
     }
     panel.reveal()
   } catch (error) {
@@ -543,7 +681,11 @@ export function activate(context: vscode.ExtensionContext) {
       if (!previewUrl) {
         return
       }
-      await showPreview(previewUrl)
+      const viewport = await resolvePreviewViewportForOpen()
+      if (!viewport) {
+        return
+      }
+      await showPreview(previewUrl, viewport)
     }),
     vscode.commands.registerCommand("rnPreview.reload", async () => {
       await reloadPreview()
