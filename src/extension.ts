@@ -5,6 +5,7 @@ import * as http from "http"
 import * as https from "https"
 
 const DEFAULT_PREVIEW_URL = "http://localhost:19006"
+const DEFAULT_PREVIEW_PORT = 19006
 const METRO_READY_TIMEOUT_MS = 30000
 const METRO_READY_INTERVAL_MS = 1000
 const METRO_HEALTHCHECK_TIMEOUT_MS = 3000
@@ -22,6 +23,7 @@ let previewHealthMonitor: NodeJS.Timeout | null = null
 let previewHealthMonitorToken = 0
 let previewHealthCheckInFlight = false
 let outputChannel: vscode.OutputChannel | null = null
+let currentPreviewUrl: string | null = null
 
 function getOutputChannel(): vscode.OutputChannel {
   if (!outputChannel) {
@@ -85,6 +87,39 @@ function validatePreviewUrl(): string {
     void vscode.window.showWarningMessage(message)
     return fallback
   }
+}
+
+function resolvePreviewUrlWithPort(previewUrl: string, port: number): string {
+  const url = new URL(previewUrl)
+  url.port = String(port)
+  return url.toString()
+}
+
+async function resolvePreviewUrlForOpen(): Promise<string | null> {
+  const previewUrl = validatePreviewUrl()
+  const input = await vscode.window.showInputBox({
+    prompt: `Preview port (default ${DEFAULT_PREVIEW_PORT})`,
+    placeHolder: String(DEFAULT_PREVIEW_PORT)
+  })
+
+  if (input === undefined) {
+    return null
+  }
+
+  const trimmed = input.trim()
+  if (!trimmed) {
+    return resolvePreviewUrlWithPort(previewUrl, DEFAULT_PREVIEW_PORT)
+  }
+
+  const parsedPort = Number(trimmed)
+  if (!Number.isInteger(parsedPort) || parsedPort < 1 || parsedPort > 65535) {
+    const message = `Invalid port "${input}". Falling back to ${DEFAULT_PREVIEW_PORT}.`
+    log(message)
+    void vscode.window.showWarningMessage(message)
+    return resolvePreviewUrlWithPort(previewUrl, DEFAULT_PREVIEW_PORT)
+  }
+
+  return resolvePreviewUrlWithPort(previewUrl, parsedPort)
 }
 
 function resetMetroState() {
@@ -429,12 +464,14 @@ function ensurePanel(previewUrl: string): vscode.WebviewPanel {
   panel.onDidDispose(() => {
     void stopMetro("Preview panel closed")
     panel = null
+    currentPreviewUrl = null
   })
 
   return panel
 }
 
 async function showPreview(previewUrl: string) {
+  currentPreviewUrl = previewUrl
   const previewPanel = ensurePanel(previewUrl)
   previewPanel.webview.html = renderLoadingHtml(previewUrl)
   previewPanel.reveal()
@@ -449,7 +486,8 @@ async function showPreview(previewUrl: string) {
 }
 
 async function reloadPreview() {
-  const previewUrl = validatePreviewUrl()
+  const previewUrl = currentPreviewUrl ?? validatePreviewUrl()
+  currentPreviewUrl = previewUrl
   if (!panel) {
     await showPreview(previewUrl)
     return
@@ -501,7 +539,10 @@ async function stopMetro(reason?: string) {
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("rnPreview.open", async () => {
-      const previewUrl = validatePreviewUrl()
+      const previewUrl = await resolvePreviewUrlForOpen()
+      if (!previewUrl) {
+        return
+      }
       await showPreview(previewUrl)
     }),
     vscode.commands.registerCommand("rnPreview.reload", async () => {
@@ -509,7 +550,8 @@ export function activate(context: vscode.ExtensionContext) {
     }),
     vscode.commands.registerCommand("rnPreview.restartMetro", async () => {
       await stopMetro("Restart requested")
-      const previewUrl = validatePreviewUrl()
+      const previewUrl = currentPreviewUrl ?? validatePreviewUrl()
+      currentPreviewUrl = previewUrl
       await startMetro(previewUrl)
       void vscode.window.showInformationMessage("React Native Preview: Metro restarted")
     })

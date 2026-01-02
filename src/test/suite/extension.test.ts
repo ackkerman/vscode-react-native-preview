@@ -31,6 +31,13 @@ function stubSpawn(sandbox: sinon.SinonSandbox) {
   return { stub, processes }
 }
 
+function getMetroSpawnCalls(spawnStub: sinon.SinonStub) {
+  return spawnStub.getCalls().filter((call) => {
+    const [command, args] = call.args
+    return command === "npx" && Array.isArray(args) && args[0] === "expo"
+  })
+}
+
 function stubRequestSequence(sandbox: sinon.SinonSandbox, statuses: number[]) {
   let callIndex = 0
   const handler = ((_: unknown, callback: (response: http.IncomingMessage) => void) => {
@@ -61,6 +68,10 @@ function stubRequestSequence(sandbox: sinon.SinonSandbox, statuses: number[]) {
   return { httpStub, httpsStub }
 }
 
+function stubPortPrompt(sandbox: sinon.SinonSandbox, value: string | undefined) {
+  return sandbox.stub(vscode.window, "showInputBox").resolves(value)
+}
+
 suite("React Native Preview コマンド", () => {
   const sandbox = sinon.createSandbox()
 
@@ -72,31 +83,34 @@ suite("React Native Preview コマンド", () => {
   test("open はヘルスチェック失敗後に Metro を起動する", async () => {
     const { stub: spawnStub } = stubSpawn(sandbox)
     const { httpStub } = stubRequestSequence(sandbox, [503, 200])
+    stubPortPrompt(sandbox, "")
 
     await vscode.commands.executeCommand("rnPreview.open")
 
-    expect(spawnStub.callCount).to.equal(1)
+    expect(getMetroSpawnCalls(spawnStub).length).to.equal(1)
     expect(httpStub.callCount).to.be.at.least(2)
   })
 
   test("open はプレビュー応答済みなら Metro を再利用する", async () => {
     const { stub: spawnStub } = stubSpawn(sandbox)
     const { httpStub } = stubRequestSequence(sandbox, [200])
+    stubPortPrompt(sandbox, "")
 
     await vscode.commands.executeCommand("rnPreview.open")
 
-    expect(spawnStub.notCalled).to.equal(true)
+    expect(getMetroSpawnCalls(spawnStub).length).to.equal(0)
     expect(httpStub.callCount).to.be.at.least(1)
   })
 
   test("restart は Metro を停止して再起動する", async () => {
     const { stub: spawnStub, processes } = stubSpawn(sandbox)
     const { httpStub } = stubRequestSequence(sandbox, [503, 200, 503, 200])
+    stubPortPrompt(sandbox, "")
 
     await vscode.commands.executeCommand("rnPreview.open")
     await vscode.commands.executeCommand("rnPreview.restartMetro")
 
-    expect(spawnStub.callCount).to.equal(2)
+    expect(getMetroSpawnCalls(spawnStub).length).to.equal(2)
     expect(processes[0].kill.called).to.equal(true)
     expect(httpStub.callCount).to.be.at.least(4)
   })
