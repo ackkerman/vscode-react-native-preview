@@ -33,12 +33,48 @@ const VIEWPORT_PRESETS: PreviewViewportQuickPickItem[] = [
     viewport: { mode: "full" }
   },
   {
-    label: "iPhone 16 (1179 x 2556)",
-    viewport: { mode: "device", label: "iPhone 16", width: 1179, height: 2556 }
+    label: "iPhone 12/13 mini (414 x 780)",
+    viewport: { mode: "device", label: "iPhone 12/13 mini", width: 414, height: 780 }
   },
   {
-    label: "Pixel 9 (1080 x 2424)",
-    viewport: { mode: "device", label: "Pixel 9", width: 1080, height: 2424 }
+    label: "iPhone X/XS/11 Pro (375 x 812)",
+    viewport: { mode: "device", label: "iPhone X/XS/11 Pro", width: 375, height: 812 }
+  },
+  {
+    label: "iPhone XR/11/XS Max (414 x 896)",
+    viewport: { mode: "device", label: "iPhone XR/11/XS Max", width: 414, height: 896 }
+  },
+  {
+    label: "iPhone 12/13/14 (390 x 844)",
+    viewport: { mode: "device", label: "iPhone 12/13/14", width: 390, height: 844 }
+  },
+  {
+    label: "iPhone 15/16/14-15 Pro (393 x 852)",
+    viewport: { mode: "device", label: "iPhone 15/16/14-15 Pro", width: 393, height: 852 }
+  },
+  {
+    label: "iPhone 16 Pro (402 x 874)",
+    viewport: { mode: "device", label: "iPhone 16 Pro", width: 402, height: 874 }
+  },
+  {
+    label: "iPhone 12/13 Pro Max/14 Plus (428 x 926)",
+    viewport: { mode: "device", label: "iPhone 12/13 Pro Max/14 Plus", width: 428, height: 926 }
+  },
+  {
+    label: "iPhone 15 Plus/14-15 Pro Max (430 x 932)",
+    viewport: { mode: "device", label: "iPhone 15 Plus/14-15 Pro Max", width: 430, height: 932 }
+  },
+  {
+    label: "iPhone 16 Pro Max (440 x 956)",
+    viewport: { mode: "device", label: "iPhone 16 Pro Max", width: 440, height: 956 }
+  },
+  {
+    label: "Pixel 7 (412 x 915)",
+    viewport: { mode: "device", label: "Pixel 7", width: 412, height: 915 }
+  },
+  {
+    label: "Galaxy Z Fold 5 (344 x 882)",
+    viewport: { mode: "device", label: "Galaxy Z Fold 5", width: 344, height: 882 }
   },
   {
     label: "Custom size...",
@@ -535,13 +571,51 @@ function renderPreviewHtml(previewUrl: string, viewport: PreviewViewport) {
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         </head>
-        <body style="margin:0;background:#0f172a;overflow:hidden;">
-          <div id="preview-root" style="position:relative;width:100vw;height:100vh;">
-            <div id="frame-wrapper" style="position:absolute;top:50%;left:50%;transform-origin:top left;">
-              <div
-                id="device-frame"
-                style="width:${viewport.width}px;height:${viewport.height}px;border-radius:28px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.45);border:1px solid rgba(148,163,184,0.35);background:#0b1220;"
-              >
+        <body>
+          <style>
+            html,
+            body {
+              margin: 0;
+              padding: 0;
+              width: 100%;
+              height: 100%;
+              overflow: hidden;
+              background: #ffffff;
+            }
+
+            #preview-root {
+              position: fixed;
+              inset: 0;
+              display: flex;
+              justify-content: center;
+              background: #ffffff;
+              overflow-x: hidden;
+              overflow-y: auto;
+              padding: 16px;
+              min-width: 0;
+              min-height: 0;
+            }
+
+            #frame-wrapper {
+              width: ${viewport.width}px;
+              height: ${viewport.height}px;
+            }
+
+            #device-frame {
+              width: ${viewport.width}px;
+              height: ${viewport.height}px;
+              border-radius: 28px;
+              overflow: hidden;
+              box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+              border: 2px solid #0b0b0b;
+              background: #0b1220;
+              transform-origin: top left;
+              will-change: transform;
+            }
+          </style>
+          <div id="preview-root">
+            <div id="frame-wrapper">
+              <div id="device-frame">
                 <iframe
                   src="${previewUrl}"
                   style="width:100%;height:100%;border:none;"
@@ -551,16 +625,36 @@ function renderPreviewHtml(previewUrl: string, viewport: PreviewViewport) {
           </div>
           <script>
             const wrapper = document.getElementById("frame-wrapper");
+            const root = document.getElementById("preview-root");
+            const frame = document.getElementById("device-frame");
             const frameWidth = ${viewport.width};
             const frameHeight = ${viewport.height};
             const applyScale = () => {
-              const availableWidth = Math.max(window.innerWidth - 32, 0);
-              const availableHeight = Math.max(window.innerHeight - 32, 0);
-              const scale = Math.min(availableWidth / frameWidth, availableHeight / frameHeight, 1);
-              wrapper.style.transform = \`translate(-50%, -50%) scale(\${scale})\`;
+              if (!wrapper || !root || !frame) {
+                return;
+              }
+              const bounds = root.getBoundingClientRect();
+              const availableWidth = (root.clientWidth || bounds.width) - 32;
+              const availableHeight = (root.clientHeight || bounds.height) - 32;
+              const scale = Math.max(availableWidth, 0) / frameWidth;
+              if (!Number.isFinite(scale) || scale <= 0) {
+                return;
+              }
+              const scaledWidth = frameWidth * scale;
+              const scaledHeight = frameHeight * scale;
+              wrapper.style.width = \`\${scaledWidth}px\`;
+              wrapper.style.height = \`\${scaledHeight}px\`;
+              frame.style.transform = \`scale(\${scale})\`;
+              root.style.alignItems = scaledHeight <= availableHeight ? "center" : "flex-start";
             };
             window.addEventListener("resize", applyScale);
-            applyScale();
+            if (typeof ResizeObserver !== "undefined" && root) {
+              const ro = new ResizeObserver(applyScale);
+              ro.observe(root);
+            }
+            requestAnimationFrame(() => applyScale());
+            requestAnimationFrame(() => applyScale());
+            setTimeout(applyScale, 0);
           </script>
         </body>
       </html>
@@ -570,11 +664,35 @@ function renderPreviewHtml(previewUrl: string, viewport: PreviewViewport) {
   return `
     <!DOCTYPE html>
     <html>
-      <body style="margin:0;overflow:hidden">
-        <iframe
-          src="${previewUrl}"
-          style="width:100vw;height:100vh;border:none"
-        ></iframe>
+      <head>
+        <style>
+          html,
+          body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #ffffff;
+          }
+
+          #preview-root {
+            position: fixed;
+            inset: 0;
+            background: #ffffff;
+          }
+
+          iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+          }
+        </style>
+      </head>
+      <body>
+        <div id="preview-root">
+          <iframe src="${previewUrl}"></iframe>
+        </div>
       </body>
     </html>
   `
